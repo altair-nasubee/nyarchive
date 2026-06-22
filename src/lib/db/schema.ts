@@ -1,0 +1,134 @@
+import { sql } from "drizzle-orm";
+import {
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
+
+/* -------------------------------------------------------------------------- */
+/*  Better Auth tables                                                        */
+/*  Field keys intentionally match Better Auth's expected model shape.        */
+/* -------------------------------------------------------------------------- */
+
+export const user = sqliteTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: integer("email_verified", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  image: text("image"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export const session = sqliteTable("session", {
+  id: text("id").primaryKey(),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
+export const account = sqliteTable("account", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: integer("access_token_expires_at", {
+    mode: "timestamp",
+  }),
+  refreshTokenExpiresAt: integer("refresh_token_expires_at", {
+    mode: "timestamp",
+  }),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export const verification = sqliteTable("verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+/* -------------------------------------------------------------------------- */
+/*  Application tables                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * 猫のプロフィール。
+ * `id` は追加順の連番で、表示時に 4 桁ゼロ埋め（0000）する。変更不可。
+ */
+export const cats = sqliteTable("cats", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  // アイコン画像（Vercel Blob）。削除のため pathname も保持。
+  iconUrl: text("icon_url"),
+  iconPathname: text("icon_pathname"),
+  // 猫の種類。プリセット選択 or 任意文字列。
+  breed: text("breed"),
+  // 誕生日（不明なら null）。年齢は表示時に算出。
+  birthDate: integer("birth_date", { mode: "timestamp" }),
+  personality: text("personality"),
+  likes: text("likes"),
+  dislikes: text("dislikes"),
+  // 飼い主（登録ユーザー）。自動設定・変更不可。
+  ownerId: text("owner_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+/**
+ * 猫の画像。
+ */
+export const catImages = sqliteTable(
+  "cat_images",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    catId: integer("cat_id")
+      .notNull()
+      .references(() => cats.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    pathname: text("pathname").notNull(),
+    isPublic: integer("is_public", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    uploadedAt: integer("uploaded_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [unique().on(table.pathname)],
+);
+
+export type Cat = typeof cats.$inferSelect;
+export type NewCat = typeof cats.$inferInsert;
+export type CatImage = typeof catImages.$inferSelect;
+export type NewCatImage = typeof catImages.$inferInsert;
+export type User = typeof user.$inferSelect;

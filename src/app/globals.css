@@ -1,0 +1,152 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-heading);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /* アーカイブ独自トークン */
+  --color-paper: var(--paper);
+  --color-paper-foreground: var(--paper-foreground);
+  --color-ink-faint: var(--ink-faint);
+  --color-tape: var(--tape);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+}
+
+/*
+  nyarchive — みんなのねこ図鑑
+  ページ全体は「暖かいダークの展示壁」、コンテンツは「紙のねこ図鑑カード」。
+  アクセントは肉球カラーのコーラル。
+*/
+:root {
+  --radius: 0.75rem;
+
+  /* 展示壁（暖かいダーク） */
+  --background: oklch(0.235 0.014 66);
+  --foreground: oklch(0.94 0.012 84);
+
+  /* ねこ図鑑カード（紙） */
+  --paper: oklch(0.962 0.014 86);
+  --paper-foreground: oklch(0.305 0.022 56);
+  --card: oklch(0.962 0.014 86);
+  --card-foreground: oklch(0.305 0.022 56);
+  --popover: oklch(0.962 0.014 86);
+  --popover-foreground: oklch(0.305 0.022 56);
+  --ink-faint: oklch(0.52 0.02 60);
+
+  /* 肉球コーラル */
+  --primary: oklch(0.7 0.142 28);
+  --primary-foreground: oklch(0.985 0.01 80);
+
+  /* ダーク面の補助色 */
+  --secondary: oklch(0.31 0.016 70);
+  --secondary-foreground: oklch(0.93 0.012 82);
+  --muted: oklch(0.31 0.014 70);
+  --muted-foreground: oklch(0.7 0.014 78);
+  --accent: oklch(0.34 0.024 56);
+  --accent-foreground: oklch(0.95 0.012 82);
+
+  --destructive: oklch(0.61 0.21 25);
+
+  /* 境界・入力・フォーカス */
+  --border: oklch(0.42 0.012 70 / 55%);
+  --input: oklch(0.5 0.014 70 / 45%);
+  --ring: oklch(0.7 0.142 28);
+
+  /* マスキングテープ */
+  --tape: oklch(0.82 0.09 88 / 70%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* 展示壁のかすかな質感 */
+    background-image:
+      radial-gradient(
+        oklch(1 0 0 / 3.5%) 0.5px,
+        transparent 0.5px
+      );
+    background-size: 4px 4px;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  .font-heading {
+    font-family: var(--font-heading), var(--font-sans), sans-serif;
+  }
+}
+
+@layer utilities {
+  /* 図鑑番号・日付の表記 */
+  .catalog-no {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  /* ねこ図鑑カードの紙質感（わずかな縦の繊維） */
+  .paper-surface {
+    background-color: var(--color-paper);
+    background-image: linear-gradient(
+      105deg,
+      oklch(1 0 0 / 35%) 0%,
+      transparent 40%
+    );
+  }
+
+  /* スクロールバーを控えめに */
+  .scroll-soft {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.7 0.142 28 / 60%) transparent;
+  }
+  .scroll-soft::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .scroll-soft::-webkit-scrollbar-thumb {
+    background-color: oklch(0.7 0.142 28 / 55%);
+    border-radius: 999px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
