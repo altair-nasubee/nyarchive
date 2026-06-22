@@ -49,25 +49,28 @@ export function ImagePopup({
           {/* 背景 */}
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-          {/* 肉球バースト */}
-          {!reduce &&
-            PAW_BURST.map((p, i) => (
-              <motion.span
-                key={i}
-                className="pointer-events-none absolute text-primary"
-                initial={{ opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 }}
-                animate={{
-                  opacity: [0, 1, 0],
-                  scale: [0, 1.1, 0.9],
-                  x: p.x,
-                  y: p.y,
-                  rotate: p.r,
-                }}
-                transition={{ duration: 0.55, delay: p.d, ease: "easeOut" }}
-              >
-                <PawMark className="size-8 drop-shadow" />
-              </motion.span>
-            ))}
+          {/* 肉球バースト（画面中央から弾ける） */}
+          {!reduce && (
+            <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center">
+              {PAW_BURST.map((p, i) => (
+                <motion.span
+                  key={i}
+                  className="col-start-1 row-start-1 text-primary"
+                  initial={{ opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 }}
+                  animate={{
+                    opacity: [0, 1, 0],
+                    scale: [0, 1.25, 0.9],
+                    x: p.x,
+                    y: p.y,
+                    rotate: p.r,
+                  }}
+                  transition={{ duration: 0.6, delay: p.d, ease: "easeOut" }}
+                >
+                  <PawMark className="size-10 drop-shadow-lg" />
+                </motion.span>
+              ))}
+            </div>
+          )}
 
           {/* 画像本体 */}
           <motion.figure
