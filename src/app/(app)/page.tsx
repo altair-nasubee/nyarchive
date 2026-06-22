@@ -21,7 +21,7 @@ export default async function GalleryPage() {
           みんなのねこ図鑑
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          縦に飼い主、横に猫。サムネイルをクリックすると拡大します。
+          飼い主と猫ごとに分類。サムネイルをクリックすると拡大します。
         </p>
       </div>
 

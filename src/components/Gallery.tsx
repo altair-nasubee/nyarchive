@@ -41,12 +41,12 @@ export function Gallery({ owners }: { owners: GalleryOwner[] }) {
               <span className="h-px flex-1 bg-border/60" aria-hidden />
             </div>
 
-            {/* 猫ごとのカラム（横スクロール） */}
-            <div className="scroll-soft -mx-1 flex gap-4 overflow-x-auto px-1 pb-3">
+            {/* 猫ごとに、写真は横並び（横スクロール）で積む */}
+            <div className="space-y-5">
               {owner.cats.map((cat) => (
                 <article
                   key={cat.id}
-                  className="paper-surface flex w-44 shrink-0 flex-col rounded-2xl p-3 text-paper-foreground shadow-lg shadow-black/20 ring-1 ring-black/5"
+                  className="paper-surface rounded-2xl p-3 text-paper-foreground shadow-lg shadow-black/20 ring-1 ring-black/5"
                 >
                   <Link
                     href={`/cats/${cat.id}`}
@@ -76,8 +76,8 @@ export function Gallery({ owners }: { owners: GalleryOwner[] }) {
                     </span>
                   </Link>
 
-                  {/* サムネイル（縦に積む） */}
-                  <div className="flex flex-col gap-2">
+                  {/* サムネイル（横に積む / 横スクロール） */}
+                  <div className="scroll-soft flex gap-2.5 overflow-x-auto pb-1">
                     {cat.images.map((img) => (
                       <motion.button
                         key={img.id}
@@ -93,14 +93,14 @@ export function Gallery({ owners }: { owners: GalleryOwner[] }) {
                             uploadedAt: img.uploadedAt,
                           })
                         }
-                        className="relative aspect-square w-full overflow-hidden rounded-lg bg-secondary outline-none ring-offset-2 ring-offset-paper focus-visible:ring-2 focus-visible:ring-primary"
+                        className="relative aspect-square w-28 shrink-0 overflow-hidden rounded-lg bg-secondary outline-none ring-offset-2 ring-offset-paper focus-visible:ring-2 focus-visible:ring-primary"
                         aria-label={`${cat.name} の写真を拡大`}
                       >
                         <Image
                           src={img.url}
                           alt={`${cat.name} の写真`}
                           fill
-                          sizes="160px"
+                          sizes="112px"
                           className="object-cover"
                         />
                       </motion.button>
