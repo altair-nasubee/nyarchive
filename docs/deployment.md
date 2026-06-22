@@ -76,6 +76,12 @@ pnpm db:migrate
    - Install: `pnpm install` / Build: `next build`（既定）
 4. 環境変数（手順4）を設定する。ただし、環境変数の `BLOB_READ_WRITE_TOKEN` はまだないので、ここでは追加しない。もしあれば削除。
 5. [Deploy] を実行して、`BLOB_READ_WRITE_TOKEN` がまだ無いので即 [Cancel Deploy] 
+6. `vercel.json` を作成して Region を Tokyo に設定する
+```json
+{
+    "regions": ["hnd1"]
+}
+```
 
 ---
 
