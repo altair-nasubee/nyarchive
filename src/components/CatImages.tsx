@@ -40,6 +40,9 @@ export function CatImages({
   const [pending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [popup, setPopup] = useState<PopupImage | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const selected = images.find((i) => i.id === selectedId) ?? null;
@@ -54,22 +57,37 @@ export function CatImages({
     });
   }
 
-  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = ""; // 同じファイルを再選択できるように
-    if (!file) return;
+    if (files.length === 0) return;
 
     startTransition(async () => {
-      try {
-        const compressed = await compressPhoto(file);
-        const fd = new FormData();
-        fd.set("file", compressed);
-        await uploadCatImage(catId, fd);
-        toast.success("画像を追加しました。");
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "アップロードに失敗しました。",
-        );
+      let ok = 0;
+      let fail = 0;
+      setProgress({ done: 0, total: files.length });
+
+      // 1枚ずつ圧縮してアップロード（Server Action本文4.5MB制限を避けるため）
+      for (const file of files) {
+        try {
+          const compressed = await compressPhoto(file);
+          const fd = new FormData();
+          fd.set("file", compressed);
+          await uploadCatImage(catId, fd);
+          ok += 1;
+        } catch {
+          fail += 1;
+        }
+        setProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
+      }
+
+      setProgress(null);
+      if (fail === 0) {
+        toast.success(`${ok}枚の画像を追加しました。`);
+      } else if (ok === 0) {
+        toast.error("アップロードに失敗しました。");
+      } else {
+        toast(`${ok}枚を追加、${fail}枚は失敗しました。`);
       }
     });
   }
@@ -118,14 +136,19 @@ export function CatImages({
             >
               <Plus className="size-7" />
               <span className="text-xs font-medium">
-                {pending ? "処理中…" : "画像追加"}
+                {pending
+                  ? progress
+                    ? `${progress.done}/${progress.total}`
+                    : "処理中…"
+                  : "画像追加"}
               </span>
             </button>
             <input
               ref={fileRef}
               type="file"
               accept={ACCEPTED_IMAGE_TYPES}
-              onChange={onPickFile}
+              multiple
+              onChange={onPickFiles}
               className="sr-only"
             />
           </>
