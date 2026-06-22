@@ -78,8 +78,8 @@ export function BottomBar({ cats }: { cats: OwnedCat[] }) {
                         <PawMark className="size-6 text-muted-foreground" />
                       )}
                     </span>
-                    <span className="catalog-no text-[0.6rem] text-muted-foreground">
-                      {formatCatId(cat.id)}
+                    <span className="max-w-14 truncate text-[0.65rem] text-muted-foreground">
+                      {cat.name}
                     </span>
                   </Link>
                 </li>
