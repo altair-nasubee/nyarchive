@@ -64,7 +64,7 @@ export function ImagePopup({
                     y: p.y,
                     rotate: p.r,
                   }}
-                  transition={{ duration: 0.6, delay: p.d, ease: "easeOut" }}
+                  transition={{ duration: 1.2, delay: p.d, ease: "easeOut" }}
                 >
                   <PawMark className="size-10 drop-shadow-lg" />
                 </motion.span>
