@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import { createClient } from "@libsql/client";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "@/lib/db/schema";
@@ -68,8 +69,7 @@ export async function seedUser(user: {
 export async function seedCat(cat: {
   name: string;
   ownerId: string;
-  iconUrl?: string | null;
-  iconPathname?: string | null;
+  iconImageId?: number | null;
   breed?: string | null;
   birthDate?: Date | null;
 }): Promise<number> {
@@ -85,10 +85,22 @@ export async function seedImage(image: {
   url: string;
   pathname: string;
   isPublic: boolean;
+  uploadedAt?: Date;
 }): Promise<number> {
   const [row] = await testDb
     .insert(schema.catImages)
     .values(image)
     .returning({ id: schema.catImages.id });
   return row.id;
+}
+
+/** 猫の明示アイコン（iconImageId）を直接セットする。 */
+export async function setIconImage(
+  catId: number,
+  imageId: number | null,
+): Promise<void> {
+  await testDb
+    .update(schema.cats)
+    .set({ iconImageId: imageId })
+    .where(eq(schema.cats.id, catId));
 }

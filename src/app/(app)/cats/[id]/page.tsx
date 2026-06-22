@@ -6,6 +6,7 @@ import { getCatWithImages } from "@/lib/queries";
 import { isAdmin, requireUser } from "@/lib/authz";
 import { formatAge, formatCatId, formatDate } from "@/lib/format";
 import { CatProfileForm } from "@/components/CatProfileForm";
+import { CatIconPicker } from "@/components/CatIconPicker";
 import { CatImages } from "@/components/CatImages";
 import { DeleteCatButton } from "@/components/DeleteCatButton";
 import { PawMark } from "@/components/PawMark";
@@ -60,6 +61,16 @@ export default async function CatDetailPage({
               imageCount={cat.images.length}
             />
           </div>
+          <div className="flex justify-center">
+            <CatIconPicker
+              catId={cat.id}
+              currentIconUrl={cat.iconUrl}
+              iconImageId={cat.iconImageId}
+              publicImages={cat.images
+                .filter((i) => i.isPublic)
+                .map((i) => ({ id: i.id, url: i.url }))}
+            />
+          </div>
           <CatProfileForm
             mode="edit"
             cat={{
@@ -70,7 +81,6 @@ export default async function CatDetailPage({
               personality: cat.personality,
               likes: cat.likes,
               dislikes: cat.dislikes,
-              iconUrl: cat.iconUrl,
             }}
           />
         </section>

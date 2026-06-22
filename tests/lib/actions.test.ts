@@ -24,7 +24,7 @@ vi.mock("@/lib/authz", () => ({
 
 import { requireUser } from "@/lib/authz";
 import { deleteImage, deleteImages, uploadImage } from "@/lib/blob";
-import { createCat, deleteCat, updateCat } from "@/actions/cats";
+import { createCat, deleteCat, setCatIcon, updateCat } from "@/actions/cats";
 import {
   deleteCatImage,
   toggleImageVisibility,
@@ -37,6 +37,7 @@ import {
   seedCat,
   seedImage,
   seedUser,
+  setIconImage,
   testDb,
 } from "../helpers/testDb";
 
@@ -124,11 +125,7 @@ describe("updateCat", () => {
 describe("deleteCat", () => {
   it("猫と配下画像を削除し、Blobもまとめて削除する", async () => {
     asUser(owner);
-    const catId = await seedCat({
-      name: "たま",
-      ownerId: "owner1",
-      iconPathname: "icon-path",
-    });
+    const catId = await seedCat({ name: "たま", ownerId: "owner1" });
     await seedImage({
       catId,
       url: "u1",
@@ -150,10 +147,11 @@ describe("deleteCat", () => {
     expect(cats).toHaveLength(0);
     expect(imgs).toHaveLength(0);
 
-    // Blob 実体の削除が呼ばれる（画像pathname + アイコンpathname）
+    // Blob 実体の削除が呼ばれる（配下画像のpathname）
     expect(deleteImages).toHaveBeenCalledTimes(1);
     const arg = vi.mocked(deleteImages).mock.calls[0][0];
-    expect(arg).toEqual(expect.arrayContaining(["p1", "p2", "icon-path"]));
+    expect(arg).toEqual(expect.arrayContaining(["p1", "p2"]));
+    expect(arg).toHaveLength(2);
   });
 
   it("第三者は削除できない（権限エラー）", async () => {
@@ -266,5 +264,109 @@ describe("deleteCatImage", () => {
     });
     await expect(deleteCatImage(imageId)).rejects.toThrow("権限がありません。");
     expect(await testDb.select().from(schema.catImages)).toHaveLength(1);
+  });
+
+  it("削除画像がアイコンだった場合は iconImageId をクリアする", async () => {
+    asUser(owner);
+    const catId = await seedCat({ name: "たま", ownerId: "owner1" });
+    const imageId = await seedImage({
+      catId,
+      url: "u",
+      pathname: "p-icon",
+      isPublic: true,
+    });
+    await setIconImage(catId, imageId);
+
+    await deleteCatImage(imageId);
+
+    const [cat] = await testDb
+      .select()
+      .from(schema.cats)
+      .where(eq(schema.cats.id, catId));
+    expect(cat.iconImageId).toBeNull();
+  });
+});
+
+describe("setCatIcon", () => {
+  it("所有者は公開画像をアイコンに設定できる", async () => {
+    asUser(owner);
+    const catId = await seedCat({ name: "たま", ownerId: "owner1" });
+    const imageId = await seedImage({
+      catId,
+      url: "u",
+      pathname: "p",
+      isPublic: true,
+    });
+
+    await setCatIcon(catId, imageId);
+
+    const [cat] = await testDb
+      .select()
+      .from(schema.cats)
+      .where(eq(schema.cats.id, catId));
+    expect(cat.iconImageId).toBe(imageId);
+  });
+
+  it("null で自動（未設定）に戻せる", async () => {
+    asUser(owner);
+    const catId = await seedCat({ name: "たま", ownerId: "owner1" });
+    const imageId = await seedImage({
+      catId,
+      url: "u",
+      pathname: "p",
+      isPublic: true,
+    });
+    await setCatIcon(catId, imageId);
+
+    await setCatIcon(catId, null);
+
+    const [cat] = await testDb
+      .select()
+      .from(schema.cats)
+      .where(eq(schema.cats.id, catId));
+    expect(cat.iconImageId).toBeNull();
+  });
+
+  it("非公開画像はアイコンにできない", async () => {
+    asUser(owner);
+    const catId = await seedCat({ name: "たま", ownerId: "owner1" });
+    const imageId = await seedImage({
+      catId,
+      url: "u",
+      pathname: "p",
+      isPublic: false,
+    });
+    await expect(setCatIcon(catId, imageId)).rejects.toThrow(
+      "アイコンには公開画像を選んでください。",
+    );
+  });
+
+  it("他の猫の画像はアイコンにできない", async () => {
+    asUser(owner);
+    const catId = await seedCat({ name: "たま", ownerId: "owner1" });
+    const otherCat = await seedCat({ name: "別猫", ownerId: "owner1" });
+    const otherImage = await seedImage({
+      catId: otherCat,
+      url: "u",
+      pathname: "p",
+      isPublic: true,
+    });
+    await expect(setCatIcon(catId, otherImage)).rejects.toThrow(
+      "対象の画像が見つかりません。",
+    );
+  });
+
+  it("第三者は設定できない（権限エラー）", async () => {
+    asUser(visitor);
+    const catId = await seedCat({ name: "たま", ownerId: "owner1" });
+    const imageId = await seedImage({
+      catId,
+      url: "u",
+      pathname: "p",
+      isPublic: true,
+    });
+    await expect(setCatIcon(catId, imageId)).rejects.toThrow(
+      "権限がありません。",
+    );
   });
 });

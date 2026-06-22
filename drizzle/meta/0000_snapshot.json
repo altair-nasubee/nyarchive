@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "fad25a00-cb90-4102-a959-847139840d1b",
+  "id": "6028f75f-9daf-47da-987e-1da5fb6f62aa",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -212,16 +212,9 @@
           "notNull": true,
           "autoincrement": false
         },
-        "icon_url": {
-          "name": "icon_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "icon_pathname": {
-          "name": "icon_pathname",
-          "type": "text",
+        "icon_image_id": {
+          "name": "icon_image_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

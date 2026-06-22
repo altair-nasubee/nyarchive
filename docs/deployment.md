@@ -176,9 +176,31 @@ Vercel プロジェクト →「Storage → 該当 Blob ストア」で、アッ
 
 ---
 
+## 9. 本番環境のDBをリセットする方法
+
+```sh
+turso db destroy nyarchive       # 確認プロンプトあり
+turso db create nyarchive
+turso db show nyarchive          # Locations が aws-ap-northeast-1 (Tokyo) になっているはず
+turso db show nyarchive --url    # 新しい TURSO_DATABASE_URL
+turso db tokens create nyarchive # 新しい TURSO_AUTH_TOKEN
+
+# → 新しい URL/トークンを Vercel の環境変数に更新
+
+TURSO_DATABASE_URL="libsql://nyarchive-xxxx.turso.io" \
+TURSO_AUTH_TOKEN="（本番トークン）" \
+pnpm db:migrate
+
+# → 再デプロイ
+```
+
+---
+
 ## 参考
 
 - 認証の詳細: [`google-auth-setup.md`](./google-auth-setup.md)
 - 環境変数テンプレート: リポジトリ直下 `.env.example`
 - スキーマ／マイグレーション: `src/lib/db/schema.ts` / `drizzle/`
 - Vercel Blob 無料枠の検討メモ: 実装プラン `plans/web-web-web-precious-eich.md` の追補セクション
+
+

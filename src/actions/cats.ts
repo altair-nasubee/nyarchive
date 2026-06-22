@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { catImages, cats } from "@/lib/db/schema";
 import { canMutate, requireUser } from "@/lib/authz";
-import { deleteImage, deleteImages, uploadImage } from "@/lib/blob";
+import { deleteImages } from "@/lib/blob";
 
 function str(formData: FormData, key: string): string | null {
   const v = formData.get(key);
@@ -23,22 +23,12 @@ function parseBirthDate(formData: FormData): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-async function maybeUploadIcon(
-  formData: FormData,
-): Promise<{ url: string; pathname: string } | null> {
-  const file = formData.get("icon");
-  if (!(file instanceof File) || file.size === 0) return null;
-  return uploadImage(file, { prefix: "cats/icons/icon" });
-}
-
 /** 猫プロフィールを新規登録し、その画像追加画面へ遷移する。 */
 export async function createCat(formData: FormData): Promise<void> {
   const viewer = await requireUser();
 
   const name = str(formData, "name");
   if (!name) throw new Error("猫の名前を入力してください。");
-
-  const icon = await maybeUploadIcon(formData);
 
   const [created] = await db
     .insert(cats)
@@ -49,8 +39,6 @@ export async function createCat(formData: FormData): Promise<void> {
       personality: str(formData, "personality"),
       likes: str(formData, "likes"),
       dislikes: str(formData, "dislikes"),
-      iconUrl: icon?.url ?? null,
-      iconPathname: icon?.pathname ?? null,
       ownerId: viewer.id,
     })
     .returning({ id: cats.id });
@@ -67,7 +55,7 @@ export async function updateCat(
   const viewer = await requireUser();
 
   const [target] = await db
-    .select({ ownerId: cats.ownerId, iconPathname: cats.iconPathname })
+    .select({ ownerId: cats.ownerId })
     .from(cats)
     .where(eq(cats.id, catId))
     .limit(1);
@@ -76,8 +64,6 @@ export async function updateCat(
 
   const name = str(formData, "name");
   if (!name) throw new Error("猫の名前を入力してください。");
-
-  const icon = await maybeUploadIcon(formData);
 
   await db
     .update(cats)
@@ -88,16 +74,46 @@ export async function updateCat(
       personality: str(formData, "personality"),
       likes: str(formData, "likes"),
       dislikes: str(formData, "dislikes"),
-      ...(icon
-        ? { iconUrl: icon.url, iconPathname: icon.pathname }
-        : {}),
     })
     .where(eq(cats.id, catId));
 
-  // アイコンを差し替えた場合は旧アイコンを削除
-  if (icon && target.iconPathname) {
-    await deleteImage(target.iconPathname);
+  revalidatePath("/");
+  revalidatePath(`/cats/${catId}`);
+}
+
+/**
+ * アイコンに使う画像を設定する（公開画像のみ）。
+ * imageId が null の場合は「自動（最初の公開画像）」へ戻す。
+ * 所有者本人または管理者のみ。
+ */
+export async function setCatIcon(
+  catId: number,
+  imageId: number | null,
+): Promise<void> {
+  const viewer = await requireUser();
+
+  const [target] = await db
+    .select({ ownerId: cats.ownerId })
+    .from(cats)
+    .where(eq(cats.id, catId))
+    .limit(1);
+  if (!target) throw new Error("対象の猫が見つかりません。");
+  if (!canMutate(viewer, target.ownerId)) throw new Error("権限がありません。");
+
+  if (imageId !== null) {
+    const [img] = await db
+      .select({ id: catImages.id, isPublic: catImages.isPublic })
+      .from(catImages)
+      .where(and(eq(catImages.id, imageId), eq(catImages.catId, catId)))
+      .limit(1);
+    if (!img) throw new Error("対象の画像が見つかりません。");
+    if (!img.isPublic) throw new Error("アイコンには公開画像を選んでください。");
   }
+
+  await db
+    .update(cats)
+    .set({ iconImageId: imageId })
+    .where(eq(cats.id, catId));
 
   revalidatePath("/");
   revalidatePath(`/cats/${catId}`);
@@ -108,23 +124,20 @@ export async function deleteCat(catId: number): Promise<void> {
   const viewer = await requireUser();
 
   const [target] = await db
-    .select({ ownerId: cats.ownerId, iconPathname: cats.iconPathname })
+    .select({ ownerId: cats.ownerId })
     .from(cats)
     .where(eq(cats.id, catId))
     .limit(1);
   if (!target) throw new Error("対象の猫が見つかりません。");
   if (!canMutate(viewer, target.ownerId)) throw new Error("権限がありません。");
 
-  // 配下画像の Blob を収集して削除
+  // 配下画像の Blob を収集して削除（アイコンは画像の1枚なので別扱い不要）
   const images = await db
     .select({ pathname: catImages.pathname })
     .from(catImages)
     .where(eq(catImages.catId, catId));
 
-  await deleteImages([
-    ...images.map((i) => i.pathname),
-    target.iconPathname,
-  ]);
+  await deleteImages(images.map((i) => i.pathname));
 
   // DB 行を削除（cat_images は FK CASCADE で同時に削除）
   await db.delete(cats).where(eq(cats.id, catId));

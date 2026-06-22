@@ -25,9 +25,4 @@ export function compressPhoto(file: File): Promise<File> {
   return compress(file, { maxWidthOrHeight: 1920, maxSizeMB: 1 });
 }
 
-/** 猫アイコン用の小さな画像（最長辺 320px / 〜0.2MB）。 */
-export function compressIcon(file: File): Promise<File> {
-  return compress(file, { maxWidthOrHeight: 320, maxSizeMB: 0.2 });
-}
-
 export const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp,image/avif";

@@ -12,12 +12,17 @@ import {
   seedCat,
   seedImage,
   seedUser,
+  setIconImage,
 } from "../helpers/testDb";
 import {
   getCatWithImages,
   getGalleryData,
   getOwnedCats,
+  resolveCatIconUrl,
 } from "@/lib/queries";
+
+const OLD = new Date("2021-01-01");
+const NEW = new Date("2023-01-01");
 
 beforeAll(applySchema);
 beforeEach(resetDb);
@@ -149,5 +154,97 @@ describe("getCatWithImages", () => {
   it("存在しない猫は null", async () => {
     const cat = await getCatWithImages(99999, { id: "alice", isAdmin: false });
     expect(cat).toBeNull();
+  });
+});
+
+describe("resolveCatIconUrl", () => {
+  const imgs = [
+    { id: 1, url: "old", uploadedAt: OLD },
+    { id: 2, url: "new", uploadedAt: NEW },
+  ];
+
+  it("公開画像が無ければ null", () => {
+    expect(resolveCatIconUrl(5, [])).toBeNull();
+    expect(resolveCatIconUrl(null, [])).toBeNull();
+  });
+
+  it("未設定なら最古の画像", () => {
+    expect(resolveCatIconUrl(null, imgs)).toBe("old");
+  });
+
+  it("明示指定が一覧にあればそれを使う", () => {
+    expect(resolveCatIconUrl(2, imgs)).toBe("new");
+  });
+
+  it("明示指定が一覧に無ければ最古へフォールバック", () => {
+    expect(resolveCatIconUrl(999, imgs)).toBe("old");
+  });
+});
+
+describe("アイコン解決（クエリ統合）", () => {
+  it("getGalleryData: 未設定なら最古の公開画像、明示ならその画像", async () => {
+    await seedUser({ id: "alice", name: "Alice", email: "alice@example.com" });
+    const catId = await seedCat({ name: "たま", ownerId: "alice" });
+    await seedImage({
+      catId,
+      url: "https://blob/old.webp",
+      pathname: "old",
+      isPublic: true,
+      uploadedAt: OLD,
+    });
+    const newId = await seedImage({
+      catId,
+      url: "https://blob/new.webp",
+      pathname: "new",
+      isPublic: true,
+      uploadedAt: NEW,
+    });
+
+    // 未設定 → 最古
+    let owners = await getGalleryData();
+    expect(owners[0].cats[0].iconUrl).toBe("https://blob/old.webp");
+
+    // 明示 → その画像
+    await setIconImage(catId, newId);
+    owners = await getGalleryData();
+    expect(owners[0].cats[0].iconUrl).toBe("https://blob/new.webp");
+  });
+
+  it("getOwnedCats: 公開画像が無ければ iconUrl は null", async () => {
+    await seedUser({ id: "alice", name: "Alice", email: "alice@example.com" });
+    const catId = await seedCat({ name: "たま", ownerId: "alice" });
+    await seedImage({
+      catId,
+      url: "https://blob/priv.webp",
+      pathname: "priv",
+      isPublic: false,
+    });
+
+    const cats = await getOwnedCats("alice");
+    expect(cats[0].iconUrl).toBeNull();
+  });
+
+  it("getCatWithImages: アイコンは公開画像のみで解決する", async () => {
+    await seedUser({ id: "alice", name: "Alice", email: "alice@example.com" });
+    const catId = await seedCat({ name: "たま", ownerId: "alice" });
+    const privId = await seedImage({
+      catId,
+      url: "https://blob/priv.webp",
+      pathname: "priv",
+      isPublic: false,
+      uploadedAt: OLD,
+    });
+    await seedImage({
+      catId,
+      url: "https://blob/pub.webp",
+      pathname: "pub",
+      isPublic: true,
+      uploadedAt: NEW,
+    });
+    // 非公開画像を明示アイコンに指定しても、公開のみで解決されフォールバック
+    await setIconImage(catId, privId);
+
+    const cat = await getCatWithImages(catId, { id: "alice", isAdmin: false });
+    expect(cat!.iconUrl).toBe("https://blob/pub.webp");
   });
 });

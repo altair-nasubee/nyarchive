@@ -86,9 +86,11 @@ export const verification = sqliteTable("verification", {
 export const cats = sqliteTable("cats", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  // アイコン画像（Vercel Blob）。削除のため pathname も保持。
-  iconUrl: text("icon_url"),
-  iconPathname: text("icon_pathname"),
+  // アイコンに使う画像（catImages.id の1枚を指す）。
+  // 未設定(null)なら表示時に「最初にアップした公開画像」へ自動フォールバック。
+  // 循環FK(cats<->cat_images)を避けるため DB レベルの外部キー制約は付けず、
+  // 整合性はアプリ側で担保する（画像削除時にクリア＋解決時に存在/公開を検証）。
+  iconImageId: integer("icon_image_id"),
   // 猫の種類。プリセット選択 or 任意文字列。
   breed: text("breed"),
   // 誕生日（不明なら null）。年齢は表示時に算出。

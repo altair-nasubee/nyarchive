@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { catImages, cats } from "@/lib/db/schema";
@@ -97,6 +97,12 @@ export async function deleteCatImage(imageId: number): Promise<void> {
 
   await db.delete(catImages).where(eq(catImages.id, imageId));
   await deleteImage(img.pathname);
+
+  // この画像がアイコンに指定されていたら未設定へ戻す（自動フォールバックに任せる）
+  await db
+    .update(cats)
+    .set({ iconImageId: null })
+    .where(and(eq(cats.id, img.catId), eq(cats.iconImageId, imageId)));
 
   revalidatePath("/");
   revalidatePath(`/cats/${img.catId}`);

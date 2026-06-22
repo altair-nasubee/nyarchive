@@ -29,8 +29,7 @@ CREATE UNIQUE INDEX `cat_images_pathname_unique` ON `cat_images` (`pathname`);--
 CREATE TABLE `cats` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
-	`icon_url` text,
-	`icon_pathname` text,
+	`icon_image_id` integer,
 	`breed` text,
 	`birth_date` integer,
 	`personality` text,

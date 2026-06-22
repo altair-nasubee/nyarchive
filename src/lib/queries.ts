@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { catImages, cats, user } from "@/lib/db/schema";
@@ -25,6 +25,28 @@ export type GalleryOwner = {
 };
 
 /**
+ * 猫のアイコンURLを解決する（公開画像のみが対象）。
+ * - 明示選択 (iconImageId) が公開画像一覧に存在すればそれを使う
+ * - 無ければ「最初にアップした公開画像（最古）」へフォールバック
+ * - 公開画像が無ければ null
+ */
+export function resolveCatIconUrl(
+  iconImageId: number | null,
+  publicImages: { id: number; url: string; uploadedAt: Date }[],
+): string | null {
+  if (publicImages.length === 0) return null;
+  if (iconImageId != null) {
+    const explicit = publicImages.find((i) => i.id === iconImageId);
+    if (explicit) return explicit.url;
+  }
+  let oldest = publicImages[0];
+  for (const img of publicImages) {
+    if (img.uploadedAt.getTime() < oldest.uploadedAt.getTime()) oldest = img;
+  }
+  return oldest.url;
+}
+
+/**
  * メインギャラリー用データ。
  * 公開画像を持つ猫のみを対象に、飼い主 → 猫 → 画像 の階層に整形する。
  */
@@ -36,7 +58,7 @@ export async function getGalleryData(): Promise<GalleryOwner[]> {
       ownerImage: user.image,
       catId: cats.id,
       catName: cats.name,
-      catIcon: cats.iconUrl,
+      catIconImageId: cats.iconImageId,
       catBreed: cats.breed,
       imageId: catImages.id,
       imageUrl: catImages.url,
@@ -50,6 +72,7 @@ export async function getGalleryData(): Promise<GalleryOwner[]> {
 
   const owners = new Map<string, GalleryOwner>();
   const catMap = new Map<number, GalleryCat>();
+  const catIconChoice = new Map<number, number | null>();
 
   for (const r of rows) {
     let owner = owners.get(r.ownerId);
@@ -68,11 +91,12 @@ export async function getGalleryData(): Promise<GalleryOwner[]> {
       cat = {
         id: r.catId,
         name: r.catName,
-        iconUrl: r.catIcon,
+        iconUrl: null,
         breed: r.catBreed,
         images: [],
       };
       catMap.set(r.catId, cat);
+      catIconChoice.set(r.catId, r.catIconImageId);
       owner.cats.push(cat);
     }
 
@@ -83,20 +107,64 @@ export async function getGalleryData(): Promise<GalleryOwner[]> {
     });
   }
 
+  // 公開画像が出揃ってからアイコンを解決
+  for (const owner of owners.values()) {
+    for (const cat of owner.cats) {
+      cat.iconUrl = resolveCatIconUrl(
+        catIconChoice.get(cat.id) ?? null,
+        cat.images,
+      );
+    }
+  }
+
   return [...owners.values()];
 }
 
 /** ログインユーザー自身が登録した猫一覧（底部バー用）。追加順。 */
 export async function getOwnedCats(ownerId: string) {
-  return db
+  const owned = await db
     .select({
       id: cats.id,
       name: cats.name,
-      iconUrl: cats.iconUrl,
+      iconImageId: cats.iconImageId,
     })
     .from(cats)
     .where(eq(cats.ownerId, ownerId))
     .orderBy(asc(cats.id));
+
+  if (owned.length === 0) return [];
+
+  // 各猫の公開画像を取得してアイコンを解決
+  const images = await db
+    .select({
+      catId: catImages.catId,
+      id: catImages.id,
+      url: catImages.url,
+      uploadedAt: catImages.uploadedAt,
+    })
+    .from(catImages)
+    .where(
+      and(
+        inArray(
+          catImages.catId,
+          owned.map((c) => c.id),
+        ),
+        eq(catImages.isPublic, true),
+      ),
+    );
+
+  const byCat = new Map<number, typeof images>();
+  for (const img of images) {
+    const list = byCat.get(img.catId) ?? [];
+    list.push(img);
+    byCat.set(img.catId, list);
+  }
+
+  return owned.map((c) => ({
+    id: c.id,
+    name: c.name,
+    iconUrl: resolveCatIconUrl(c.iconImageId, byCat.get(c.id) ?? []),
+  }));
 }
 
 export type CatDetail = Awaited<ReturnType<typeof getCatWithImages>>;
@@ -104,6 +172,7 @@ export type CatDetail = Awaited<ReturnType<typeof getCatWithImages>>;
 /**
  * 猫の詳細と画像一覧。
  * 閲覧者が所有者本人または管理者の場合は非公開画像も含める。
+ * アイコンURLは（公開画像のみを対象に）解決して返す。
  */
 export async function getCatWithImages(
   catId: number,
@@ -113,8 +182,7 @@ export async function getCatWithImages(
     .select({
       id: cats.id,
       name: cats.name,
-      iconUrl: cats.iconUrl,
-      iconPathname: cats.iconPathname,
+      iconImageId: cats.iconImageId,
       breed: cats.breed,
       birthDate: cats.birthDate,
       personality: cats.personality,
@@ -150,5 +218,10 @@ export async function getCatWithImages(
     )
     .orderBy(desc(catImages.uploadedAt));
 
-  return { ...cat, canMutate: canSeePrivate, images };
+  const iconUrl = resolveCatIconUrl(
+    cat.iconImageId,
+    images.filter((i) => i.isPublic),
+  );
+
+  return { ...cat, iconUrl, canMutate: canSeePrivate, images };
 }
