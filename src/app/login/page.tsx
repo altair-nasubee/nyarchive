@@ -44,31 +44,30 @@ export default async function LoginPage() {
           nyarchive
         </h1>
         <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-faint">
-          Myねこのアーカイブ。Myねこの思い出をアップロードして、みんなで眺めましょう。
+          ねこ図鑑です。ねこの思い出をアップロードして、みんなで眺めましょう。
         </p>
 
         <hr className="my-7 border-dashed border-ink-faint/30" />
 
-        <dl className="catalog-no mb-8 grid grid-cols-3 gap-3 text-[0.7rem] text-ink-faint">
-          <div>
-            <dt className="uppercase tracking-widest">No.</dt>
-            <dd className="mt-0.5 text-base text-paper-foreground">————</dd>
-          </div>
-          <div>
-            <dt className="uppercase tracking-widest">Filed by</dt>
-            <dd className="mt-0.5 text-base text-paper-foreground">you</dd>
-          </div>
-          <div>
-            <dt className="uppercase tracking-widest">Status</dt>
-            <dd className="mt-0.5 text-base text-paper-foreground">new</dd>
-          </div>
-        </dl>
+        <ul className="mb-8 space-y-2.5 text-sm text-paper-foreground">
+          <li className="flex items-center gap-2.5">
+            <PawMark className="size-4 shrink-0 text-primary" />
+            ねこのプロフィールを登録
+          </li>
+          <li className="flex items-center gap-2.5">
+            <PawMark className="size-4 shrink-0 text-primary" />
+            写真をアップロードして整理（公開／非公開）
+          </li>
+          <li className="flex items-center gap-2.5">
+            <PawMark className="size-4 shrink-0 text-primary" />
+            みんなのギャラリーで眺める
+          </li>
+        </ul>
 
         <SignInButton />
 
         <p className="mt-5 text-xs leading-relaxed text-ink-faint">
-          ログインすると、あなたの猫を登録・公開できます。
-          ほかの飼い主が公開した猫の写真も閲覧できます。
+          Google アカウントでログインして始めましょう。
         </p>
       </section>
     </main>
