@@ -109,7 +109,7 @@ flowchart TD
     end
 
     Frontend -->|Server Actions / fetch| Backend
-    Frontend -->|Display image (Blob URL)| Storage
+    Frontend -->|"Display image (Blob URL)"| Storage
     Backend -->|via Drizzle ORM| DB
     Backend -->|auth check| Auth
     Auth -->|read/write user data| DB
